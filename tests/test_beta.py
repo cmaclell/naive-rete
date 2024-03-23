@@ -1,5 +1,7 @@
+import pytest
+
 from py_rete.production import Production
-from py_rete.conditions import AND
+from py_rete.conditions import AND, OR
 from py_rete.conditions import Cond
 from py_rete.conditions import Neg
 from py_rete.conditions import Ncc
@@ -88,6 +90,92 @@ def test_filter_second():
     assert len(list(net.matches)) == 1
 
 
+
+class TestOr:
+    def check_matches(self, production, count):
+        net = ReteNetwork()
+        @production
+        def test():
+            pass
+        net.add_production(test)
+        assert len(list(net.matches)) == count
+
+    def test_or_false_false(self):
+        self.check_matches(Production(Filter(lambda: False) | Filter(lambda:False)), 0)
+    def test_or_false_true(self):
+        self.check_matches(Production(Filter(lambda: False) | Filter(lambda:True)), 1)
+    def test_or_true_false(self):
+        self.check_matches(Production(Filter(lambda: True) | Filter(lambda:False)), 1)
+    def test_or_true_true(self):
+        self.check_matches(Production(Filter(lambda: True) | Filter(lambda:True)), 2)
+
+
+class TestOperatorChaining:
+    def check_matches(self, production, count):
+        net = ReteNetwork()
+        @production
+        def test():
+            pass
+        net.add_production(test)
+        assert len(list(net.matches)) == count
+
+    def test_condition_bitwise(self):
+        def a(): pass
+        def b(): pass
+        def c(): pass
+        c1 = OR(Filter(a),AND(Filter(b), Filter(c)))
+        c2 = Filter(a) | Filter(b) & Filter(c)
+        assert c1 == c2
+
+    def test_or_and(self):
+        self.check_matches(Production(Filter(lambda: False) | Filter(lambda:False) & Filter(lambda:False)), 0)
+    def test_or_and2(self):
+        self.check_matches(Production((Filter(lambda: True) | Filter(lambda:False)) & Filter(lambda:False)), 0)
+    def test_or_and3(self):
+        # (True | (False & False)) => True
+        self.check_matches(Production(Filter(lambda: True) | (Filter(lambda:False) & Filter(lambda:False))), 1)
+    def test_and_or1(self):
+        self.check_matches(Production(Filter(lambda: False) & Filter(lambda:False) | Filter(lambda:False)), 0)
+    def test_and_or2(self):
+        self.check_matches(Production(Filter(lambda: True) & Filter(lambda:False) | Filter(lambda:False)), 0)
+    def test_and_or3(self):
+        self.check_matches(Production(Filter(lambda: False) & Filter(lambda:True) | Filter(lambda:False)), 0)
+    def test_and_or4(self):
+        # (False & False | True) => True
+        self.check_matches(Production(Filter(lambda: False) & Filter(lambda:False) | Filter(lambda:True)), 1)
+    def test_and_or5(self):
+        # (True & True | False) => True
+        self.check_matches(Production(Filter(lambda: True) & Filter(lambda:True) | Filter(lambda:False)), 1)
+    def test_and_or6(self):
+        # (True & False | True) => True
+        self.check_matches(Production(Filter(lambda: True) & Filter(lambda:False) | Filter(lambda:True)), 1)
+    def test_and_or7(self):
+        # (False & True | True) => True
+        self.check_matches(Production(Filter(lambda: False) & Filter(lambda:True) | Filter(lambda:True)), 1)
+    def test_and_or8(self):
+        # (True & True | True) => True
+        self.check_matches(Production(Filter(lambda: True) & Filter(lambda:True) | Filter(lambda:True)), 2)
+
+
+def test_example():
+    net = ReteNetwork()
+    def raises():
+        raise Exception
+
+    a = Fact(a="a")
+    b = Fact(b="b")
+    c = Filter(lambda: raises())
+
+    @Production(a | b & c)
+    def test():
+        pass
+
+    net.add_fact(a)
+    net.add_fact(b)
+    with pytest.raises(Exception):
+        net.add_production(test)
+
+
 def test_empty_prod():
     net = ReteNetwork()
 
@@ -97,7 +185,7 @@ def test_empty_prod():
 
     net.add_production(test)
 
-    len(list(net.matches)) == 1
+    assert len(list(net.matches)) == 1
 
 
 def test_network_case1():
