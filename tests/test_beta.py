@@ -156,8 +156,15 @@ class TestOperatorChaining:
         # (True & True | True) => True
         self.check_matches(Production(Filter(lambda: True) & Filter(lambda:True) | Filter(lambda:True)), 2)
 
+    def test_long_chain(self):
+        # True & (False | (True & False)) => False, but gives a false positive
+        self.check_matches(Production(
+            Filter(lambda: True)
+            &  (Filter(lambda:False) | (Filter(lambda: True) & Filter(lambda:False)))
+            ),
+        0)
 
-def test_example():
+def test_filter_is_called():
     net = ReteNetwork()
     def raises():
         raise Exception
