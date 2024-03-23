@@ -118,9 +118,13 @@ class Production():
         if pattern is None:
             return ([],)
         disjuncts = compile_disjuncts(pattern)
-        return [list(get_rete_conds(AND(*disjunct)))
-                if isinstance(disjunct, tuple) else
-                list(get_rete_conds(AND(disjunct))) for disjunct in disjuncts]
+        conds = []
+        for disjunct in disjuncts:
+            if isinstance(disjunct, tuple):
+                conds.append(list(get_rete_conds(AND(*disjunct))))
+            else:
+                conds.append(list(get_rete_conds(AND(disjunct))))
+        return conds
 
     def get_rete_conds(self):
         return self._get_rete_conds(self.pattern)
