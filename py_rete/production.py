@@ -121,7 +121,13 @@ class Production():
         conds = []
         for disjunct in disjuncts:
             if isinstance(disjunct, tuple):
-                conds.append(list(get_rete_conds(AND(*disjunct))))
+                if len(disjunct) == 1:
+                    if isinstance(disjunct[0], NOT):
+                        conds.append(list(get_rete_conds(disjunct)))
+                    else:
+                        conds.append(list(get_rete_conds(*disjunct)))
+                else:
+                    conds.append(list(get_rete_conds(AND(*disjunct))))
             else:
                 conds.append(list(get_rete_conds(AND(disjunct))))
         return conds
