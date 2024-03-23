@@ -233,7 +233,8 @@ class ReteNetwork:
         self.production_counter += 1
         self.productions.add(prod)
 
-        for conds in prod.get_rete_conds():
+        conds_list = prod.get_rete_conds()
+        for conds in conds_list:
             current_node = self.build_or_share_network_for_conditions(
                 self.beta_root, conds, [])
             p_node = self.build_or_share_p(current_node, prod)
