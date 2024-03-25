@@ -27,22 +27,21 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def dnf(expression):
-    """
-    Compiles a boolean expression into "Disjunctive normal form".
-    """
     if isinstance(expression, OR):
-        return (se for e in expression for se in dnf(e))
+        return list(se for e in expression for se in dnf(e))
     if isinstance(expression, AND):
         total = []
         for sub_expression in product(*[dnf(e) for e in expression]):
             total.append(list(se for e in sub_expression for se in e))
         return total
     if isinstance(expression, NOT):
+        if len(expression) == 1 and isinstance(expression[0], NOT):
+            return dnf(AND(*[i for ele in expression for i in ele]))
         inner = dnf(AND(*[ele for ele in expression]))
-        # list means implicit OR
-        return [[NOT(*branch) if isinstance(branch, list) else NOT(branch) for branch in inner]]
+        return [[NOT(*branch) for branch in inner]]
     else:
         return [[expression]]
+
 
 def get_rete_conds(it):
     for ele in it:
