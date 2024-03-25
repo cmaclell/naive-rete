@@ -26,29 +26,23 @@ if TYPE_CHECKING:  # pragma: no cover
     from py_rete.pnode import PNode
 
 
-def compile_disjuncts(it, nest: bool = True):
-    if isinstance(it, OR):
-        return tuple(compile_disjuncts(ele, nest=False) for ele in it)
-    elif isinstance(it, (Production, AND)):
-        inner = []
-        for ele in it:
-            if isinstance(ele, NOT):
-                inner += compile_disjuncts(ele)
-            else:
-                inner.append(compile_disjuncts(ele))
-        return tuple(product(*inner))
-    elif isinstance(it, NOT):
-        if len(it) > 1:
-            inner = compile_disjuncts(AND(*[ele for ele in it]))
-        else:
-            inner = compile_disjuncts(it[0])
-        return (tuple(NOT(*branch) if isinstance(branch, tuple) else
-                      NOT(branch) for branch in inner),)
-    elif nest:
-        return (it,)
+def dnf(expression):
+    """
+    Compiles a boolean expression into "Disjunctive normal form".
+    """
+    if isinstance(expression, OR):
+        return (se for e in expression for se in dnf(e))
+    if isinstance(expression, AND):
+        total = []
+        for sub_expression in product(*[dnf(e) for e in expression]):
+            total.append(list(se for e in sub_expression for se in e))
+        return total
+    if isinstance(expression, NOT):
+        inner = dnf(AND(*[ele for ele in expression]))
+        # list means implicit OR
+        return [[NOT(*branch) if isinstance(branch, list) else NOT(branch) for branch in inner]]
     else:
-        return it
-
+        return [[expression]]
 
 def get_rete_conds(it):
     for ele in it:
@@ -117,19 +111,10 @@ class Production():
     def _get_rete_conds(pattern):
         if pattern is None:
             return ([],)
-        disjuncts = compile_disjuncts(pattern)
+        disjuncts = dnf(pattern)
         conds = []
         for disjunct in disjuncts:
-            if isinstance(disjunct, tuple):
-                if len(disjunct) == 1:
-                    if isinstance(disjunct[0], NOT):
-                        conds.append(list(get_rete_conds(disjunct)))
-                    else:
-                        conds.append(list(get_rete_conds(*disjunct)))
-                else:
-                    conds.append(list(get_rete_conds(AND(*disjunct))))
-            else:
-                conds.append(list(get_rete_conds(AND(disjunct))))
+            conds.append(list(get_rete_conds(disjunct)))
         return conds
 
     def get_rete_conds(self):

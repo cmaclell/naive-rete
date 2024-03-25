@@ -402,7 +402,7 @@ def test_ncc():
     c2 = Cond(V('z'), 'color', 'red')
     c3 = Cond(V('z'), 'on', V('w'))
 
-    # @Production(AND(c0, c1, NOT(AND(c2, c3))))
+    #@Production(AND(c0, c1, NOT(AND(c2, c3))))
     @Production(c0 & c1 & ~(c2 & c3))
     def p0():
         pass
