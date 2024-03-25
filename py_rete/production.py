@@ -106,18 +106,12 @@ class Production():
             for token in node.activations:
                 yield token
 
-    @staticmethod
-    def _get_rete_conds(pattern):
-        if pattern is None:
-            return ([],)
-        disjuncts = dnf(pattern)
-        conds = []
-        for disjunct in disjuncts:
-            conds.append(list(get_rete_conds(disjunct)))
-        return conds
-
     def get_rete_conds(self):
-        return self._get_rete_conds(self.pattern)
+        if self.pattern is None:
+            return ([],)
+        disjuncts = dnf(self.pattern)
+        return [list(get_rete_conds(disjunct)) for disjunct in disjuncts]
+
 
     def fire(self, token: Token):
         kwargs = {arg: self._rete_net if arg == 'net' else
