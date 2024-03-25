@@ -18,6 +18,14 @@ def test_not2():
     dnf = disjunctive_normal_form(NOT(NOT('A')))
     assert dnf == disjunctive_normal_form('A') == [['A']]
 
+def test_not3():
+    dnf = disjunctive_normal_form(NOT(NOT(OR('A', 'B'))))
+    assert dnf == disjunctive_normal_form(OR('A', 'B'))
+
+def test_not4():
+    dnf = disjunctive_normal_form(NOT(NOT(AND('A', OR('C', 'B')))))
+    assert dnf == disjunctive_normal_form(AND('A', OR('C', 'B')))
+
 def test_not_and():
     dnf = disjunctive_normal_form(NOT(AND('A', 'B')))
     assert dnf == disjunctive_normal_form(OR(NOT('A'), NOT('B')))
