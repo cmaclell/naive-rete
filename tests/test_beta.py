@@ -1,7 +1,7 @@
 import pytest
 
 from py_rete.production import Production
-from py_rete.conditions import AND, OR
+from py_rete.conditions import AND, OR, NOT
 from py_rete.conditions import Cond
 from py_rete.conditions import Neg
 from py_rete.conditions import Ncc
@@ -163,6 +163,11 @@ class TestOperatorChaining:
             &  (Filter(lambda:False) | (Filter(lambda: True) & Filter(lambda:False)))
             ),
         0)
+
+    def test_long_chain_not(self):
+        # True & (False | (True & False)) => False, but gives a false positive
+        self.check_matches(Production(NOT(Filter(lambda:False))),
+        1)
 
 def test_filter_is_called():
     net = ReteNetwork()
@@ -407,23 +412,31 @@ def test_ncc():
     def p0():
         pass
 
+    @Production(c2 & c3)
+    def p1():
+        pass
+
     net.add_production(p0)
+    net.add_production(p1)
 
     wmes = [
-        WME('B1', 'on', 'B2'),
-        WME('B1', 'on', 'B3'),
-        WME('B1', 'color', 'red'),
-        WME('B2', 'on', 'table'),
-        WME('B2', 'left-of', 'B3'),
-        WME('B2', 'color', 'blue'),
-        WME('B3', 'left-of', 'B4'),
-        WME('B3', 'on', 'table'),
+        WME('B1', 'on', 'B2'),       #
+        WME('B1', 'on', 'B3'),       #
+        WME('B1', 'color', 'red'),   #
+        WME('B2', 'on', 'table'),    #
+        WME('B2', 'left-of', 'B3'),  #
+        WME('B2', 'color', 'blue'),  #
+        WME('B3', 'left-of', 'B4'),  #
+        WME('B3', 'on', 'table'),    #
     ]
     for wme in wmes:
         net.add_wme(wme)
-    assert len(list(p0.activations)) == 2
+    assert len(list(p0.activations)) == 3
     net.add_wme(WME('B3', 'color', 'red'))
-    assert len(list(p0.activations)) == 1
+    assert len(list(p0.activations)) == 2
+    net.add_wme(WME('B4', 'color', 'red'))
+    net.add_wme(WME('B4', 'on', 'table'))
+    assert len(list(p0.activations)) == 0
 
 
 def test_black_white():

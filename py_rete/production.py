@@ -35,10 +35,14 @@ def dnf(expression):
             total.append(list(se for e in sub_expression for se in e))
         return total
     if isinstance(expression, NOT):
-        if len(expression) == 1 and isinstance(expression[0], NOT):
+        if isinstance(expression[0], NOT):
             return dnf(AND(*[i for ele in expression for i in ele]))
-        inner = dnf(AND(*[ele for ele in expression]))
-        return [[NOT(*branch) for branch in inner]]
+        elif isinstance(expression[0], AND):
+            inner = dnf(OR(*[NOT(ele) for ele in expression[0]]))
+            return inner
+        else:
+            inner = dnf(AND(*[ele for ele in expression]))
+            return [[NOT(*branch) for branch in inner]]
     else:
         return [[expression]]
 

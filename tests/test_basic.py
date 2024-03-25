@@ -242,7 +242,7 @@ def test_add_remove_join():
 def test_add_remove_ncc():
     net = ReteNetwork()
 
-    @Production(~Fact(first="hello", second="world"))
+    @Production(NOT(Fact(first="hello", second="world")))
     def ncc_fun():
         pass
 
