@@ -27,6 +27,23 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def dnf(expression):
+    """
+    Disjunctive normal form.
+
+    Converts a Boolean sequence to disjunctive normal form, i.e. OR of ANDs, or
+    a disjunction of conjunctions.
+
+    Conversions:
+    1. ~(~A)        =>   A
+    2. ~(A & B)     =>  ~A | ~B
+    3. ~(A | B)     =>  ~A & ~B
+    4. A & (B | C)  =>  (A & B) | (A & C)
+    4. (A | B) & C  =>  (A & C) | (B & C)
+
+    Returns: A list of lists, where top level list contains OR'd sequences of
+    AND'd conditions.
+    E.g. [[A, B], [C]] equals (A & B) | C
+    """
     if isinstance(expression, OR):
         return list(se for e in expression for se in dnf(e))
     if isinstance(expression, AND):
