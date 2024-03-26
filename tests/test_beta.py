@@ -122,13 +122,13 @@ class TestOr:
         assert len(list(net.matches)) == count
 
     def test_or_false_false(self):
-        self.check_matches(Production(Filter(lambda: False) | Filter(lambda:False)), 0)
+        self.check_matches(Production(Filter(lambda: False) | Filter(lambda: False)), 0)
     def test_or_false_true(self):
-        self.check_matches(Production(Filter(lambda: False) | Filter(lambda:True)), 1)
+        self.check_matches(Production(Filter(lambda: False) | Filter(lambda: True)), 1)
     def test_or_true_false(self):
-        self.check_matches(Production(Filter(lambda: True) | Filter(lambda:False)), 1)
+        self.check_matches(Production(Filter(lambda: True) | Filter(lambda: False)), 1)
     def test_or_true_true(self):
-        self.check_matches(Production(Filter(lambda: True) | Filter(lambda:True)), 2)
+        self.check_matches(Production(Filter(lambda: True) | Filter(lambda: True)), 2)
 
 
 class TestOperatorChaining:
@@ -144,51 +144,51 @@ class TestOperatorChaining:
         def a(): pass
         def b(): pass
         def c(): pass
-        c1 = OR(Filter(a),AND(Filter(b), Filter(c)))
+        c1 = OR(Filter(a), AND(Filter(b), Filter(c)))
         c2 = Filter(a) | Filter(b) & Filter(c)
         assert c1 == c2
 
     def test_or_and(self):
-        self.check_matches(Production(Filter(lambda: False) | Filter(lambda:False) & Filter(lambda:False)), 0)
+        self.check_matches(Production(Filter(lambda: False) | Filter(lambda: False) & Filter(lambda: False)), 0)
     def test_or_and2(self):
-        self.check_matches(Production((Filter(lambda: True) | Filter(lambda:False)) & Filter(lambda:False)), 0)
+        self.check_matches(Production((Filter(lambda: True) | Filter(lambda: False)) & Filter(lambda: False)), 0)
     def test_or_and3(self):
         # (True | (False & False)) => True
-        self.check_matches(Production(Filter(lambda: True) | (Filter(lambda:False) & Filter(lambda:False))), 1)
+        self.check_matches(Production(Filter(lambda: True) | (Filter(lambda: False) & Filter(lambda: False))), 1)
     def test_and_or1(self):
-        self.check_matches(Production(Filter(lambda: False) & Filter(lambda:False) | Filter(lambda:False)), 0)
+        self.check_matches(Production(Filter(lambda: False) & Filter(lambda: False) | Filter(lambda: False)), 0)
     def test_and_or2(self):
-        self.check_matches(Production(Filter(lambda: True) & Filter(lambda:False) | Filter(lambda:False)), 0)
+        self.check_matches(Production(Filter(lambda: True) & Filter(lambda: False) | Filter(lambda: False)), 0)
     def test_and_or3(self):
-        self.check_matches(Production(Filter(lambda: False) & Filter(lambda:True) | Filter(lambda:False)), 0)
+        self.check_matches(Production(Filter(lambda: False) & Filter(lambda: True) | Filter(lambda: False)), 0)
     def test_and_or4(self):
         # (False & False | True) => True
-        self.check_matches(Production(Filter(lambda: False) & Filter(lambda:False) | Filter(lambda:True)), 1)
+        self.check_matches(Production(Filter(lambda: False) & Filter(lambda: False) | Filter(lambda: True)), 1)
     def test_and_or5(self):
         # (True & True | False) => True
-        self.check_matches(Production(Filter(lambda: True) & Filter(lambda:True) | Filter(lambda:False)), 1)
+        self.check_matches(Production(Filter(lambda: True) & Filter(lambda: True) | Filter(lambda: False)), 1)
     def test_and_or6(self):
         # (True & False | True) => True
-        self.check_matches(Production(Filter(lambda: True) & Filter(lambda:False) | Filter(lambda:True)), 1)
+        self.check_matches(Production(Filter(lambda: True) & Filter(lambda: False) | Filter(lambda: True)), 1)
     def test_and_or7(self):
         # (False & True | True) => True
-        self.check_matches(Production(Filter(lambda: False) & Filter(lambda:True) | Filter(lambda:True)), 1)
+        self.check_matches(Production(Filter(lambda: False) & Filter(lambda: True) | Filter(lambda: True)), 1)
     def test_and_or8(self):
         # (True & True | True) => True
-        self.check_matches(Production(Filter(lambda: True) & Filter(lambda:True) | Filter(lambda:True)), 2)
+        self.check_matches(Production(Filter(lambda: True) & Filter(lambda: True) | Filter(lambda: True)), 2)
 
     def test_long_chain(self):
         # True & (False | (True & False)) => False
         self.check_matches(Production(
             Filter(lambda: True)
-            &  (Filter(lambda:False) | (Filter(lambda: True) & Filter(lambda:False)))
+            &  (Filter(lambda: False) | (Filter(lambda: True) & Filter(lambda: False)))
             ),
         0)
 
     def test_long_chain_not(self):
         # True & (False | (True & NOT(False))) => True
         self.check_matches(Production(Filter(lambda: True)
-            &  (Filter(lambda:False) | (Filter(lambda: True) & NOT(Fact())))
+            &  (Filter(lambda: False) | (Filter(lambda: True) & NOT(Fact())))
             ),
         1)
 
@@ -431,7 +431,7 @@ def test_ncc():
     c2 = Cond(V('z'), 'color', 'red')
     c3 = Cond(V('z'), 'on', V('w'))
 
-    #@Production(AND(c0, c1, NOT(AND(c2, c3))))
+    # @Production(AND(c0, c1, NOT(AND(c2, c3))))
     @Production(c0 & c1 & ~(c2 & c3))
     def p0():
         pass
@@ -444,26 +444,23 @@ def test_ncc():
     net.add_production(p1)
 
     wmes = [
-        WME('B1', 'on', 'B2'),       #
-        WME('B1', 'on', 'B3'),       #
-        WME('B1', 'color', 'red'),   #
-        WME('B2', 'on', 'table'),    #
-        WME('B2', 'left-of', 'B3'),  #
-        WME('B2', 'color', 'blue'),  #
-        WME('B3', 'left-of', 'B4'),  #
-        WME('B3', 'on', 'table'),    #
+        WME('B1', 'on', 'B2'),
+        WME('B1', 'on', 'B3'),
+        WME('B1', 'color', 'red'),
+        WME('B2', 'on', 'table'),
+        WME('B2', 'left-of', 'B3'),
+        WME('B2', 'color', 'blue'),
+        WME('B3', 'left-of', 'B4'),
+        WME('B3', 'on', 'table'),
     ]
     for wme in wmes:
         net.add_wme(wme)
-    assert len(list(p0.activations)) == 3
-    assert len(list(p1.activations)) == 3
+    assert len(list(p0.activations)) ==  len(list(p1.activations)) == 3
     net.add_wme(WME('B3', 'color', 'red'))
-    assert len(list(p0.activations)) == 2
-    assert len(list(p1.activations)) == 2
+    assert len(list(p0.activations)) == len(list(p1.activations)) == 2
     net.add_wme(WME('B4', 'color', 'red'))
     net.add_wme(WME('B4', 'on', 'table'))
-    assert len(list(p0.activations)) == 0
-    assert len(list(p1.activations)) == 0
+    assert len(list(p0.activations)) == len(list(p1.activations)) == 0
 
 
 def test_black_white():
