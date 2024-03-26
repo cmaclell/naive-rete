@@ -1,6 +1,22 @@
-from py_rete.conditions import AND, OR, NOT
+import pytest
 
+from py_rete.conditions import AND, OR, NOT, Filter
 from py_rete.production import dnf as disjunctive_normal_form
+from py_rete.production import Production
+from py_rete.fact import Fact
+
+def test_not_initialization():
+    with pytest.raises(TypeError):
+        NOT('A', 'B')
+
+    with pytest.raises(TypeError):
+        NOT(Filter(lambda: False))
+
+    # These are OK:
+    NOT(AND('A', 'B'))
+    NOT(OR('A', 'B'))
+    Production(~(Fact() | Fact()))
+    Production(~(Fact() & Fact()))
 
 def test_and():
     dnf = disjunctive_normal_form(AND('A', 'B'))
@@ -28,12 +44,11 @@ def test_not4():
 
 def test_not_and():
     dnf = disjunctive_normal_form(NOT(AND('A', 'B')))
-    assert dnf == disjunctive_normal_form(OR(NOT('A'), NOT('B')))
+    assert dnf == disjunctive_normal_form(OR(NOT('A'), NOT('B'))) == [[NOT('A')], [NOT('B')]]
 
 def test_not_or():
     dnf = disjunctive_normal_form(NOT(OR('A', 'B')))
-    assert dnf == disjunctive_normal_form(AND(NOT('A'), NOT('B')))
-    #assert dnf == disjunctive_normal_form(OR(NOT('A'), NOT('B')))
+    assert dnf == disjunctive_normal_form(AND(NOT('A'), NOT('B'))) == [[NOT('A'), NOT('B')]]
 
 def test_chain1():
     dnf = disjunctive_normal_form(AND('A', OR('B', 'C')))
