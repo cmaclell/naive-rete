@@ -40,6 +40,28 @@ def test_network_case0():
     assert len(list(p0.activations)) > 0
 
 
+def test_not():
+    net = ReteNetwork()
+    c0 = Cond('x', 'id', '1')
+
+    @Production(NOT(c0))
+    def p0():
+        pass
+
+    @Production(NOT(NOT(c0)))
+    def p1():
+        pass
+
+    net.add_production(p0)
+    net.add_production(p1)
+
+    w0 = WME('x', 'id', '1')
+
+    net.add_wme(w0)
+    assert len(list(p0.activations)) == 0
+    assert len(list(p1.activations)) == 1
+
+
 def test_bind_first():
     net = ReteNetwork()
 
@@ -88,7 +110,6 @@ def test_filter_second():
     net.add_production(test)
 
     assert len(list(net.matches)) == 1
-
 
 
 class TestOr:
@@ -157,7 +178,7 @@ class TestOperatorChaining:
         self.check_matches(Production(Filter(lambda: True) & Filter(lambda:True) | Filter(lambda:True)), 2)
 
     def test_long_chain(self):
-        # True & (False | (True & False)) => False, but gives a false positive
+        # True & (False | (True & False)) => False
         self.check_matches(Production(
             Filter(lambda: True)
             &  (Filter(lambda:False) | (Filter(lambda: True) & Filter(lambda:False)))
@@ -165,14 +186,17 @@ class TestOperatorChaining:
         0)
 
     def test_long_chain_not(self):
-        # True & (False | (True & False)) => False, but gives a false positive
-        self.check_matches(Production(NOT(Filter(lambda:False))),
+        # True & (False | (True & NOT(False))) => True
+        self.check_matches(Production(Filter(lambda: True)
+            &  (Filter(lambda:False) | (Filter(lambda: True) & NOT(Fact())))
+            ),
         1)
+
 
 def test_filter_is_called():
     net = ReteNetwork()
     def raises():
-        raise Exception
+        return 1/0
 
     a = Fact(a="a")
     b = Fact(b="b")
@@ -184,7 +208,7 @@ def test_filter_is_called():
 
     net.add_fact(a)
     net.add_fact(b)
-    with pytest.raises(Exception):
+    with pytest.raises(ZeroDivisionError):
         net.add_production(test)
 
 
@@ -412,7 +436,7 @@ def test_ncc():
     def p0():
         pass
 
-    @Production(c2 & c3)
+    @Production(c0 & c1 & (~c2 | ~c3))
     def p1():
         pass
 
@@ -432,11 +456,14 @@ def test_ncc():
     for wme in wmes:
         net.add_wme(wme)
     assert len(list(p0.activations)) == 3
+    assert len(list(p1.activations)) == 3
     net.add_wme(WME('B3', 'color', 'red'))
     assert len(list(p0.activations)) == 2
+    assert len(list(p1.activations)) == 2
     net.add_wme(WME('B4', 'color', 'red'))
     net.add_wme(WME('B4', 'on', 'table'))
     assert len(list(p0.activations)) == 0
+    assert len(list(p1.activations)) == 0
 
 
 def test_black_white():

@@ -36,12 +36,11 @@ def dnf(expression):
         return total
     if isinstance(expression, NOT):
         if isinstance(expression[0], NOT):
-            return dnf(AND(*[i for ele in expression for i in ele]))
+            return dnf(AND(*[ele for ele in expression[0]]))
         elif isinstance(expression[0], AND):
-            inner = dnf(OR(*[NOT(ele) for ele in expression[0]]))
-            return inner
+            return dnf(OR(*[NOT(ele) for ele in expression[0]]))
         else:
-            inner = dnf(AND(*[ele for ele in expression]))
+            inner = dnf(AND(expression[0]))
             return [[NOT(*branch) for branch in inner]]
     else:
         return [[expression]]
