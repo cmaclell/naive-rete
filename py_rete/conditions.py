@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from py_rete.common import V
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import List
+    from typing import Sequence
     from typing import Union
     from typing import Tuple
     from typing import Callable
@@ -26,7 +26,7 @@ class ConditionalList(tuple):
     """
     A conditional that consists of a list of other conditionals.
     """
-    def __new__(cls, *args: List[Union[ConditionalList, ConditionalElement]]):
+    def __new__(cls, *args: Sequence[Union[ConditionalList, ConditionalElement]]):
         return super().__new__(cls, args)
 
     def __repr__(self):
@@ -74,7 +74,12 @@ class OR(ConditionalList, ComposableCond):
 
 
 class NOT(ConditionalList, ComposableCond):
-    pass
+    def __new__(cls, *args: Sequence[Union[ConditionalList, ConditionalElement]]):
+        if len(args) > 1:
+            raise TypeError("NOT takes only one argument, use explicit NOT(AND(...)) or NOT(OR(...))")
+        elif isinstance(args[0], Filter):
+            raise TypeError("NOT doesn't work with Filter() conditions downstream, refactor your rules.")
+        return super().__new__(cls, *args)
 
 
 @dataclass(eq=True, frozen=True)
@@ -91,7 +96,7 @@ class Cond(ConditionalElement, ComposableCond):
         return "(%s ^%s %s)" % (self.identifier, self.attribute, self.value)
 
     @property
-    def vars(self) -> List[Tuple[str, V]]:
+    def vars(self) -> Sequence[Tuple[str, V]]:
         """
         Returns a list of tuples (field, var) that contains the slot names as a
         string and the variable object it maps to.
