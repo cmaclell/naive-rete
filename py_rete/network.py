@@ -1,3 +1,6 @@
+"""
+A Rete Network stores all the facts and productions to compute matches.
+"""
 from __future__ import annotations
 from typing import TYPE_CHECKING
 import random
@@ -59,6 +62,7 @@ class ReteNetwork:
         """
         while n > 0:
             matches = list(self.matches)
+            # ``if not matches:`` is more Pythonic
             if len(matches) <= 0:
                 break
             match = random.choice(matches)
@@ -71,6 +75,10 @@ class ReteNetwork:
             output += "{}: {}\n".format(p.id, p)
         output += "\nFacts:\n"
         for fid in self.facts:
+            # frep = {
+            #   key: val.id if isinstance(val, Fact) else repr(val)
+            #   for key, val in self.facts[fid].items()
+            # }
             copy = self.facts[fid].duplicate()
             for k in copy:
                 if isinstance(copy[k], Fact):
@@ -83,6 +91,7 @@ class ReteNetwork:
 
     def num_nodes(self):
         def get_nodes(node):
+            # return 1 + sum(get_nodes(c) for c in node.children)
             if len(node.children) == 0:
                 return [node]
 
@@ -94,7 +103,10 @@ class ReteNetwork:
         nodes = get_nodes(self.beta_root)
         return len(nodes)
 
-    def render_graph(self):
+    def render_graph(self):  # pragma: no cover
+        """
+        ..  todo:: Consider refactoring as a function **outside** the class.
+        """
         import networkx as nx
         from networkx.drawing.nx_agraph import graphviz_layout
         import matplotlib.pyplot as plt
@@ -177,9 +189,8 @@ class ReteNetwork:
         if fact.id is None or fact.id not in self.facts:
             raise ValueError("Fact has no id or does not exist in network.")
 
-        if fact.id in self.facts:
-            del self.facts[fact.id]
-            self.remove_wme_by_fact_id(fact.id)
+        del self.facts[fact.id]
+        self.remove_wme_by_fact_id(fact.id)
 
         fact.id = None
 
@@ -188,6 +199,8 @@ class ReteNetwork:
 
     def update_fact(self, fact: Fact) -> None:
         # TODO: Figure out a fancy way to only update part of the fact
+        # target = self.get_fact_by_id(fact.id)
+        # target.update(fact)
         self.remove_fact(fact)
         self.add_fact(fact)
 
@@ -345,7 +358,7 @@ class ReteNetwork:
                                  condition: Cond) -> JoinNode:
 
         for child in parent.all_children:
-            if (type(child) == JoinNode and child.amem == amem and
+            if (isinstance(child, JoinNode) and child.amem == amem and
                     child.condition == condition):
                 return child
         node = JoinNode(children=[], parent=parent, amem=amem,
@@ -384,7 +397,7 @@ class ReteNetwork:
     def build_or_share_beta_memory(self, parent: ReteNode) -> BetaMemory:
         for child in parent.children:
             # if isinstance(child, BetaMemory):  # Don't include subclasses
-            if type(child) == BetaMemory:
+            if isinstance(child, BetaMemory):
                 return child
         node = BetaMemory(parent=parent)
         parent.children.append(node)
@@ -464,6 +477,8 @@ class ReteNetwork:
             elif isinstance(cond, Bind):
                 current_node = self.build_or_share_bind_node(current_node,
                                                              cond)
+            else:  # pragma: no cover
+                raise RuntimeError(f"Unexpected {cond} type")
             conds_higher_up.append(cond)
         return current_node
 
@@ -496,6 +511,8 @@ class ReteNetwork:
             parent.children = [new_node]
             self.update_new_node_with_matches_from_above(parent)
             parent.children = saved_list_of_children
+        else:  # pragma: no cover
+            raise RuntimeError(f"Unexpected {parent} type")
 
     def delete_alpha_memory(self, amem: AlphaMemory):
         del self.alpha_hash[amem.key]

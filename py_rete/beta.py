@@ -1,13 +1,16 @@
+"""
+Rete Node and Beta Memory -- a kind of Rete Node.
+"""
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from py_rete.common import Token
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import Any
-    from typing import List
-    from typing import Dict
-    from typing import Optional
+    from typing import Any, Optional
+    # 3.8 and below.
+    from typing import List, Dict
+    # Otherwise, use list and dict
     from py_rete.common import V
     from py_rete.common import WME
     from py_rete.alpha import AlphaMemory
@@ -45,7 +48,9 @@ class BetaMemory(ReteNode):
 
     def find_nearest_ancestor_with_same_amem(self, amem: AlphaMemory
                                              ) -> Optional[JoinNode]:
-        return self.parent.find_nearest_ancestor_with_same_amem(amem)
+        if self.parent:
+            return self.parent.find_nearest_ancestor_with_same_amem(amem)
+        return None  # pragma: no cover
 
     def left_activation(self, token: Optional[Token] = None,
                         wme: Optional[WME] = None,

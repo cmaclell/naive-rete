@@ -1,3 +1,11 @@
+""""
+The foundational Fact used in Productions.
+
+TODO:: Replace __fact_type__ as an attribute name
+    This avoids *potential* conflict with Python internals.
+    Use "_fact_type" to provide all the privacy that's needed.
+    The built-in __class__.__name__ attribute me be sufficient.
+"""
 from __future__ import annotations
 from typing import TYPE_CHECKING
 from itertools import chain
@@ -92,7 +100,7 @@ class Fact(ComposableCond, dict):
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Fact) or self.id != other.id:
-            return False
+            return NotImplemented
 
         keys = set()
         keys.update(self)

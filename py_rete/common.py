@@ -52,8 +52,8 @@ class WME:
     __slots__ = ['identifier', 'attribute', 'value', 'amems', 'tokens',
                  'negative_join_results']
 
-    def __init__(self, identifier: Hashable, attribute: Hashable, value:
-                 Hashable) -> None:
+    def __init__(self, identifier: Hashable, attribute: Hashable,
+                 value: Hashable) -> None:
         """
         Identifier, attribute, and value can be any kind of object except V
         objects (i.e., variables).
@@ -80,7 +80,7 @@ class WME:
         :type other: WME
         """
         if not isinstance(other, WME):
-            return False
+            return NotImplemented
         return self.identifier == other.identifier and \
             self.attribute == other.attribute and \
             self.value == other.value
@@ -134,7 +134,10 @@ class Token:
     def is_root(self) -> bool:
         return not self.parent and not self.wme
 
-    def render_tokens(self):
+    def render_tokens(self):  # pragma: no cover
+        """
+        ..  todo:: Consider refactoring as a function **outside** the class.
+        """
         import networkx as nx
         from networkx.drawing.nx_agraph import graphviz_layout
         import matplotlib.pyplot as plt
@@ -186,6 +189,9 @@ class Token:
             - Add optimization for right unlinking (pg 87 of Doorenbois
               thesis).
 
+            - Would introducing weakref help break the circularity
+              and simplify this?
+
         :type token: Token
         """
         from py_rete.ncc_node import NccNode
@@ -218,7 +224,7 @@ class Token:
                         bmchild.amem.successors.remove(bmchild)
 
         if isinstance(self.node, NegativeNode):
-            if not self.node.items:
+            if not self.node.items:  # pragma: no cover
                 self.node.amem.successors.remove(self.node)
             for jr in self.join_results:
                 jr.wme.negative_join_results.remove(jr)
@@ -227,7 +233,7 @@ class Token:
             for result_tok in self.ncc_results:
                 if result_tok.wme:
                     result_tok.wme.tokens.remove(result_tok)
-                if result_tok.parent:
+                if result_tok.parent:  # pragma: no cover
                     result_tok.parent.children.remove(result_tok)
 
         elif isinstance(self.node, NccPartnerNode):

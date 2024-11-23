@@ -3,3 +3,5 @@ pytest-benchmark
 pytest-mypy
 coverage
 flake8
+tox
+pbr

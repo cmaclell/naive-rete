@@ -1,29 +1,41 @@
+"""
+Bind Node: a kind of Rete Node with a code block and a variable binding.
+"""
 from __future__ import annotations
 from typing import TYPE_CHECKING
 import inspect
 
-from py_rete.beta import ReteNode
+from py_rete.beta import ReteNode, BetaMemory
 from py_rete.common import V
 
 if TYPE_CHECKING:  # pragma: no cover
+    # Mypy for 3.8...
     from typing import Any
-    from typing import Dict
+    from typing_extensions import TypeAlias
+    from typing import Dict, List
+    from typing import Callable
     from py_rete.network import ReteNetwork
+
+    ProdFunc: TypeAlias = Callable[[], Any]
 
 
 class BindNode(ReteNode):
     """
-    A beta network class. This class stores a code snipit, with variables in
+    A beta network class. This class stores a code snippet, with variables in
     it. It gets all the bindings from the incoming token, updates them with the
     current bindings, binds the result to the target variable (to), then
     activates its children with the updated bindings.
     """
 
-    def __init__(self, children, parent, func, to, rete: ReteNetwork):
+    def __init__(self, children: List[BetaMemory], parent: BetaMemory,
+                 func: ProdFunc, to: str, rete: ReteNetwork
+                 ) -> None:
         """
-        :type children:
-        :type parent: BetaNode
-        :type to: str
+        :param children: list of ReteNodes
+        :param parent: BetaNode
+        :param func: The Production function
+        :param to: Name of variable to bind to
+        :param rete: Overall ReteNetwork
         """
         super().__init__(children=children, parent=parent)
         self.func = func
@@ -35,11 +47,11 @@ class BindNode(ReteNode):
         Given a binding that maps variables to values, this instantiates the
         arguments for the function and executes it.
         """
-        args = inspect.getfullargspec(self.func)[0]
+        argspec = inspect.getfullargspec(self.func)[0]
         args = {arg: self._rete_net if arg == 'net' else
                 self._rete_net.facts[binding[V(arg)]] if
                 binding[V(arg)] in self._rete_net.facts else
-                binding[V(arg)] for arg in args}
+                binding[V(arg)] for arg in argspec}
         return self.func(**args)
 
     def left_activation(self, token, wme, binding):

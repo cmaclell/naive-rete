@@ -126,6 +126,8 @@ class Cond(ConditionalElement, ComposableCond):
         return True
 
     def __hash__(self):
+        # TODO: If self.__class__.__name__ used instead of a literal,
+        # this may be properly inheritable.
         return hash(('cond', self.identifier, self.attribute, self.value))
 
 
@@ -184,7 +186,7 @@ class Bind(ConditionalElement, ComposableCond):
     to: V
 
     def __repr__(self):
-        return "Bind({},{})".format(repr(self.func), repr(self.to))
+        return "Bind({}, {})".format(repr(self.func), repr(self.to))
 
     def __hash__(self):
         return hash(('bind', self.func, self.to))

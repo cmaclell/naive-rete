@@ -10,6 +10,138 @@ from py_rete.common import WME
 from py_rete.common import Token
 from py_rete.common import V
 from py_rete.network import ReteNetwork
+from py_rete.bind_node import BindNode
+from py_rete.join_node import JoinNode
+from py_rete.negative_node import NegativeNode
+from py_rete.ncc_node import NccNode, NccPartnerNode
+from py_rete.pnode import PNode
+
+import py_rete.ncc_node
+
+import pytest
+from unittest.mock import Mock, MagicMock, call, sentinel
+
+@pytest.mark.parametrize("func_result,expected_calls",
+    [
+        (sentinel.OLD_VALUE,
+            [call(sentinel.TOKEN, sentinel.WME, {V('self'): sentinel.SELF, sentinel.TO: sentinel.OLD_VALUE})]),
+        (sentinel.NEW_VALUE,
+            [])
+    ]
+)
+def test_bind_node_stubs(func_result, expected_calls):
+    func = Mock(name='func', return_value=func_result)
+    parent = Mock(name='parent')
+    network = MagicMock(name='rete', __in__=False)
+    child = Mock(name='child')
+
+    bn = BindNode([child], parent, func, sentinel.TO, network)
+    bn.left_activation(sentinel.TOKEN, sentinel.WME, {V('self'): sentinel.SELF, sentinel.TO: sentinel.OLD_VALUE})
+    assert func.mock_calls == [
+        call(self=sentinel.SELF)
+    ]
+    assert child.left_activation.mock_calls == expected_calls
+
+
+def test_join_node_stubs():
+    """JoinNode lines 95, 99-100. ancestor and ancestor.right_unlinked; ValueError on index()"""
+    ancestor_1 = Mock(right_unlinked=False)
+    ancestor_0 = Mock(right_unlinked=True, nearest_ancestor_with_same_amem=ancestor_1)
+    parent = Mock(name='parent', find_nearest_ancestor_with_same_amem=Mock(return_value=ancestor_0))
+    amem = Mock(name='AlphaMemory', successors=[sentinel.PREVIOUS_NODE])
+    condition = Mock(name='Cond', vars=[('name', sentinel.VALUE)])
+    node = JoinNode(children=[], parent=parent, amem=amem, condition=condition)
+    node.update_nearest_ancestor_with_same_amem()
+
+    node.relink_to_alpha_memory()
+
+    assert amem.successors == [node, sentinel.PREVIOUS_NODE]
+
+def test_negative_node_stubs():
+    ancestor_1 = Mock(name='ancestor_1', right_unlinked=False)
+    ancestor_0 = Mock(name='ancestor_0', right_unlinked=True, find_nearest_ancestor_with_same_amem=Mock(return_value=ancestor_1))
+    parent = Mock(name='parent', find_nearest_ancestor_with_same_amem=Mock(return_value=ancestor_0))
+    amem = Mock(name='AlphaMemory', successors=[sentinel.PREVIOUS_NODE])
+    condition = Mock(name='Cond', vars=[('name', sentinel.VALUE)])
+    node = NegativeNode(children=[], parent=parent, amem=amem, condition=condition)
+
+    nearest = node.find_nearest_ancestor_with_same_amem(amem)
+    assert nearest == node
+
+    node.relink_to_alpha_memory()
+    assert amem.successors == [node, sentinel.PREVIOUS_NODE]
+    assert node.right_unlinked
+
+def test_ncc_node_stubs(monkeypatch):
+    # See https://docs.python.org/3/library/unittest.mock.html#attaching-mocks-as-attributes.
+
+    ancestor_0 = sentinel.ANCESTOR_0
+    result = Mock(name="result")
+    parent = Mock(
+        find_nearest_ancestor_with_same_amem=Mock(return_value=ancestor_0),
+    )
+
+    partner = Mock(new_result_buffer = [result])
+    partner.parent = parent
+    node = NccNode(partner=partner)
+    assert node.partner == partner
+    assert node.partner.parent == parent
+
+    nearest = node.find_nearest_ancestor_with_same_amem(sentinel.AMEM)
+    assert nearest == ancestor_0
+
+    new_token = Mock()
+    monkeypatch.setattr(py_rete.ncc_node, 'Token', Mock(return_value=new_token))
+
+    node.left_activation(sentinel.PARENT, Mock(), {"self", Mock()})
+    assert result.owner == new_token
+
+def test_ncc_partner_node_stubs(monkeypatch):
+    ncc_node = Mock(items=[])
+    node = NccPartnerNode(sentinel.PARENT, ncc_node)
+    new_token = sentinel.NEW_TOKEN
+    monkeypatch.setattr(py_rete.ncc_node, 'Token', Mock(return_value=new_token))
+
+    node.left_activation(sentinel.TOKEN, sentinel.WME, {"self", sentinel.NODE})
+    assert len(node.new_result_buffer) == 1
+    result = node.new_result_buffer[0]
+    assert result == sentinel.NEW_TOKEN
+
+def test_pnode_pop_new_token_stubs():
+    production = Mock(name="Production")
+    token = Mock(name="Token", children=[])
+    wme = Mock(name="WME", tokens=[])
+    binding = sentinel.BINDING
+
+    node = PNode(production)
+    node.left_activation(token, wme, binding)
+    assert node.new
+    assert node.items
+
+    new = node.pop_new_token()
+    assert new.parent == token
+    assert new.wme == wme
+    assert new.binding == sentinel.BINDING
+
+    assert node.pop_new_token() is None
+
+def test_pnode_new_activations_stubs():
+    production = Mock(name="Production")
+    token = Mock(name="Token", children=[])
+    wme = Mock(name="WME", tokens=[])
+    binding = sentinel.BINDING
+
+    node = PNode(production)
+    node.left_activation(token, wme, binding)
+    assert node.new
+    assert node.items
+
+    activations = list(node.new_activations())
+    assert len(activations) == 1
+    new = activations[0]
+    assert new.parent == token
+    assert new.wme == wme
+    assert new.binding == sentinel.BINDING
 
 
 def test_network_case0():

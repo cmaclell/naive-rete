@@ -1,3 +1,9 @@
+"""
+Join Node: a kind of Rete Node
+with an alpha memory connected to its right side,
+and another node in the beta network on the right.
+"""
+
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
@@ -8,6 +14,7 @@ from py_rete.alpha import AlphaMemory
 from py_rete.beta import ReteNode
 
 if TYPE_CHECKING:  # pragma: no cover
+    # Mypy for 3.8...
     from typing import Dict
     from typing import Any
     from py_rete.conditions import Cond
@@ -69,10 +76,13 @@ class JoinNode(ReteNode):
     def right_activation(self, wme: WME, new_node=False) -> None:
         """
         Called when an element is added to the respective alpha memory.
+
+        The new_node parameter handles the edge case
+        where the right activation comes from
+        ``update_new_node_with_matches_from_above(...)``.
+        In this case, it looks like the amem was recently non-empty,
+        but it actually isn't the case.
         """
-        # New node handles the edge case where the right activation comes from
-        # update_new_node_with_matches_from_above(...). In this case, it looks
-        # like the amem was recently non-empty, but it actually isn't the case.
         if self.amem_recently_nonempty and not new_node:
             self.relink_to_beta_memory()
             if not self.parent.items:

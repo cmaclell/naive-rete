@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from py_rete.conditions import Cond
 from py_rete.conditions import Ncc
+from py_rete.conditions import ConditionalList
 from py_rete.common import WME
 from py_rete.common import Token
 from py_rete.common import V
@@ -12,6 +13,14 @@ from py_rete.conditions import Bind
 from py_rete.conditions import OR
 from py_rete.conditions import NOT
 from py_rete.conditions import Filter
+from py_rete.conditions import Neg
+from py_rete.beta import BetaMemory
+from py_rete.join_node import JoinNode
+from py_rete.negative_node import NegativeNode
+from py_rete.ncc_node import NccNode, NccPartnerNode
+
+from unittest.mock import sentinel, Mock, call, MagicMock
+from pytest import raises, mark
 
 
 def test_readme_facts():
@@ -124,6 +133,66 @@ def test_token():
     assert tdummy.children == [t0]
     assert t0.children == []
 
+    # Is this the inherited implementation from ``object``?
+    assert hash(t0) == hash(id(t0))
+
+
+def test_token_delete_betamemory():
+    amem_list = MagicMock()
+    amem = Mock(successors=amem_list)
+    jn = JoinNode(amem=amem, condition=Mock(vars=[]))
+    bm = BetaMemory(items=[], children=[jn])
+    # token_children_list = MagicMock(wraps=list())
+    t = Token(parent=Mock(), wme=Mock(), node=bm)
+    # t.children = token_children_list
+    bm.items=[t]
+    t.delete_token_and_descendents()
+
+    # TODO: final assertions on list removals
+    # t.children.__bool__.mock_calls == [call()]
+
+
+def test_token_delete_negativenode():
+    # A NegativeNode is *also* a BetaMemory and a JoinNode
+    amem = Mock(successors=[])
+    nn = NegativeNode(amem=amem, condition=Mock(vars=[]), items=[], children=[])
+    t = Token(parent=Mock(), wme=Mock(), node=nn)
+    jr = Mock(wme=Mock(negative_join_results=[]))
+    jr.wme.negative_join_results = [jr]
+    t.join_results = [jr]
+    amem.successors = [nn]
+    nn.items = [t]
+    t.delete_token_and_descendents()
+
+    # TODO: final assertions on list removals
+
+
+def test_token_delete_nccnode():
+    # An NCCNode is a BetaMemory
+    partner = Mock()
+    nccn = NccNode(partner, items=[])
+    t = Token(parent=Mock(), wme=Mock(), node=nccn)
+    t.node.items = [t]
+    result_items = Mock(name="result_tok items", wme=Mock(tokens=[]), parent=Mock(children=[]))
+    result_empty = Mock(name="result_tok empty", wme=None, parent=None)
+    result_items.wme.tokens = [result_items]
+    result_items.parent.children = [result_items]
+    t.ncc_results = [result_empty, result_items]
+    t.delete_token_and_descendents()
+
+    # TODO: Final assertions on various list removals
+
+
+def test_token_delete_nccpartnernode():
+    nccpn = NccPartnerNode(ncc_node=None)
+    owner = Mock(name="owner", binding=sentinel.BINDING, ncc_results=[])
+    t = Token(parent=Mock(), wme=Mock(), node=nccpn)
+    owner.ncc_results = [t]
+    t.owner = owner
+    t.delete_token_and_descendents()
+
+    # TODO: Final assertions on various list removals
+
 
 def test_condition_vars():
     c0 = Cond(V('x'), 'is', V('y'))
@@ -144,11 +213,71 @@ def test_condition_test():
     assert not c0.test(w1)
 
 
+def test_codition_hash():
+    c0 = Cond(sentinel.IDENTIFIER, sentinel.ATTRIBUTE, sentinel.VALUE)
+    assert hash(c0) == hash(('cond', sentinel.IDENTIFIER, sentinel.ATTRIBUTE, sentinel.VALUE))
+
+
+def test_condtional_list():
+    cl = ConditionalList(sentinel.C1, sentinel.C2)
+    assert repr(cl) == "ConditionalList(sentinel.C1, sentinel.C2)"
+
+    # Is this the inherited implementation from ``tuple``?
+    assert hash(cl) == hash((ConditionalList.__name__, tuple(cl)))
+
+
+def test_composable_cond():
+    and_left = AND(sentinel.L1, sentinel.L2)
+    and_right = AND(sentinel.R1, sentinel.R2)
+
+    assert and_left & and_right == AND(sentinel.L1, sentinel.L2, sentinel.R1, sentinel.R2)
+    assert OR(sentinel.L1) & and_right == AND(OR(sentinel.L1), sentinel.R1, sentinel.R2)
+    assert and_left & OR(sentinel.R1) == AND(sentinel.L1, sentinel.L2, OR(sentinel.R1))
+
+    or_left = OR(sentinel.L1, sentinel.L2)
+    or_right = OR(sentinel.R1, sentinel.R2)
+
+    assert or_left | or_right == OR(sentinel.L1, sentinel.L2, sentinel.R1, sentinel.R2)
+    assert AND(sentinel.L1) | or_right == OR(AND(sentinel.L1), sentinel.R1, sentinel.R2)
+    assert or_left | AND(sentinel.R1) == OR(sentinel.L1, sentinel.L2, AND(sentinel.R1))
+
+
+def test_neg_cond():
+    c0 = Neg(sentinel.IDENTIFIER, sentinel.ATTRIBUTE, sentinel.VALUE)
+    assert repr(c0) == "-(sentinel.IDENTIFIER ^sentinel.ATTRIBUTE sentinel.VALUE)"
+    assert hash(c0) == hash(('neg', sentinel.IDENTIFIER, sentinel.ATTRIBUTE, sentinel.VALUE))
+
+
 def test_ncc():
     c0 = Cond(V('a'), V('b'), V('c'))
     c1 = Ncc(Cond(V('x'), 'color', 'red'))
     c2 = Ncc(c0, c1)
     assert c2.number_of_conditions == 2
+    assert repr(c2) == "-Ncc((V(a) ^V(b) V(c)), -Ncc((V(x) ^color red),))"
+    assert hash(c1) == hash(('ncc', tuple(c1)))
+
+
+def test_filter():
+    c0 = Filter(sentinel.FUNC)
+    assert repr(c0) == "Filter(sentinel.FUNC)"
+    assert hash(c0) == hash(('filter', sentinel.FUNC))
+
+
+def test_bind():
+    c0 = Bind(sentinel.FUNC, sentinel.TO)
+    assert repr(c0) == "Bind(sentinel.FUNC, sentinel.TO)"
+    assert hash(c0) == hash(('bind', sentinel.FUNC, sentinel.TO))
+
+
+def test_wme_valueerror():
+    with raises(ValueError):
+        w = WME(V('identifier'), 'attribute', 'value')
+    with raises(ValueError):
+        w = WME('identifier', V('attribute'), 'value')
+    with raises(ValueError):
+        w = WME('identifier', 'attribute', V('value'))
+    assert not (WME('a', 'b', 'c') == 'string')
+    assert not (42 == WME('a', 'b', 'c'))
 
 
 def test_add_remove_empty():
