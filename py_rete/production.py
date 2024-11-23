@@ -26,28 +26,41 @@ if TYPE_CHECKING:  # pragma: no cover
     from py_rete.pnode import PNode
 
 
-def compile_disjuncts(it, nest: bool = True):
-    if isinstance(it, OR):
-        return tuple(compile_disjuncts(ele, nest=False) for ele in it)
-    elif isinstance(it, (Production, AND)):
-        inner = []
-        for ele in it:
-            if isinstance(ele, NOT):
-                inner += compile_disjuncts(ele)
-            else:
-                inner.append(compile_disjuncts(ele))
-        return tuple(product(*inner))
-    elif isinstance(it, NOT):
-        if len(it) > 1:
-            inner = compile_disjuncts(AND(*[ele for ele in it]))
+def dnf(expression):
+    """
+    Disjunctive normal form.
+
+    Converts a Boolean sequence to disjunctive normal form, i.e. OR of ANDs, or
+    a disjunction of conjunctions.
+
+    Conversions:
+    1. ~(~A)        =>   A
+    2. ~(A & B)     =>  ~A | ~B
+    3. ~(A | B)     =>  ~A & ~B
+    4. A & (B | C)  =>  (A & B) | (A & C)
+    4. (A | B) & C  =>  (A & C) | (B & C)
+
+    Returns: A list of lists, where top level list contains OR'd sequences of
+    AND'd conditions.
+    E.g. [[A, B], [C]] equals (A & B) | C
+    """
+    if isinstance(expression, OR):
+        return list(se for e in expression for se in dnf(e))
+    if isinstance(expression, AND):
+        total = []
+        for sub_expression in product(*[dnf(e) for e in expression]):
+            total.append(list(se for e in sub_expression for se in e))
+        return total
+    if isinstance(expression, NOT):
+        if isinstance(expression[0], NOT):
+            return dnf(AND(*[ele for ele in expression[0]]))
+        elif isinstance(expression[0], AND):
+            return dnf(OR(*[NOT(ele) for ele in expression[0]]))
         else:
-            inner = compile_disjuncts(it[0])
-        return (tuple(NOT(*branch) if isinstance(branch, tuple) else
-                      NOT(branch) for branch in inner),)
-    elif nest:
-        return (it,)
+            inner = dnf(AND(expression[0]))
+            return [[NOT(*branch) for branch in inner]]
     else:
-        return it
+        return [[expression]]
 
 
 def get_rete_conds(it):
@@ -116,10 +129,9 @@ class Production():
     def get_rete_conds(self):
         if self.pattern is None:
             return ([],)
-        disjuncts = compile_disjuncts(self.pattern)
-        return [list(get_rete_conds(AND(*disjunct)))
-                if isinstance(disjunct, tuple) else
-                list(get_rete_conds(AND(disjunct))) for disjunct in disjuncts]
+        disjuncts = dnf(self.pattern)
+        return [list(get_rete_conds(disjunct)) for disjunct in disjuncts]
+
 
     def fire(self, token: Token):
         kwargs = {arg: self._rete_net if arg == 'net' else
